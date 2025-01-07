@@ -1,4 +1,5 @@
 .devcontainer/
+.vscode/
 node_modules/
 coverage/
 build/

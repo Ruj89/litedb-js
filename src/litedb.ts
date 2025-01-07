@@ -1,4 +1,8 @@
-import { LiteDatabase as NativeLiteDatabase } from '../build/Release/addon';
+const litedb_native = require("../build/Release/litedb_native");
+
+export interface NativeLiteDatabase {
+  getCollection<T>(name: string): LiteCollection<T>;
+}
 
 export interface Query<T> {
   (item: T): boolean;
@@ -16,7 +20,7 @@ export class LiteDatabase {
   private nativeDb: NativeLiteDatabase;
 
   constructor() {
-    this.nativeDb = new NativeLiteDatabase();
+    this.nativeDb = new litedb_native.LiteDatabase();
   }
 
   getCollection<T>(name: string): LiteCollection<T> {

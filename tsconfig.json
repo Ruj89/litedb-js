@@ -12,7 +12,7 @@
     "strict": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
-    "noImplicitAny": true
+    "noImplicitAny": true,
   },
   "include": [
     "src/**/*"
@@ -20,5 +20,5 @@
   "exclude": [
     "node_modules",
     "dist"
-  ]
+  ],
 }
