@@ -6,7 +6,8 @@ public:
     static Napi::Object Init(Napi::Env env, Napi::Object exports);
     LiteDatabaseWrapper(const Napi::CallbackInfo& info);
     
+    Napi::Value GetCollection(const Napi::CallbackInfo& info);
+    
 private:
     LiteDatabase database;
-    Napi::Value GetCollection(const Napi::CallbackInfo& info);
 };
