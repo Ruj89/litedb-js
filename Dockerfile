@@ -1,11 +1,12 @@
 FROM alpine:3.21 as builder
-RUN apk add dotnet9-sdk
+RUN apk add dotnet8-sdk
 RUN apk add git
 RUN apk add nodejs
 RUN apk add npm
 RUN apk add python3
 RUN apk add make
 RUN apk add g++
+RUN apk add zlib-dev
 
 FROM builder as development
 RUN apk add mandoc man-pages

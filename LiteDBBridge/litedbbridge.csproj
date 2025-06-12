@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <OutputType>Library</OutputType>
+    <PublishAot>true</PublishAot>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <!-- Includo direttamente i sorgenti di LiteDB -->
+  <ItemGroup>
+    <Compile Include="../LiteDB/LiteDB/Client/**/*.cs" />
+    <Compile Include="../LiteDB/LiteDB/Document/**/*.cs" />
+    <Compile Include="../LiteDB/LiteDB/Engine/**/*.cs" />
+    <Compile Include="../LiteDB/LiteDB/Utils/**/*.cs" />
+    <!-- Se ci sono altre cartelle, le aggiungi qui -->
+  </ItemGroup>
+</Project>
