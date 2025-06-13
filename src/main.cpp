@@ -1,13 +1,18 @@
-// Sample file to use the LiteDBBridge dll
-
 #include <dlfcn.h>
 #include <iostream>
 
-typedef void (*InsertDocumentFunc)();
+typedef void (*InsertDocumentFunc)(const char*);
 
-int main()
+int main(int argc, char* argv[])
 {
-    // Apri la .so
+    if (argc < 2)
+    {
+        std::cerr << "Usage: " << argv[0] << " <path_to_db>" << std::endl;
+        return 1;
+    }
+
+    const char* dbPath = argv[1];
+
     void* handle = dlopen("../LiteDBBridge/bin/Release/net8.0/linux-x64/native/litedbbridge.so", RTLD_LAZY);
     if (!handle)
     {
@@ -15,7 +20,6 @@ int main()
         return 1;
     }
 
-    // Recupera il simbolo (la funzione esportata)
     InsertDocumentFunc insertDocument = (InsertDocumentFunc)dlsym(handle, "InsertDocument");
     if (!insertDocument)
     {
@@ -24,13 +28,10 @@ int main()
         return 1;
     }
 
-    // Chiama la funzione!
-    std::cout << "Calling InsertDocument..." << std::endl;
-    insertDocument();
+    std::cout << "Calling InsertDocument with db: " << dbPath << std::endl;
+    insertDocument(dbPath);
     std::cout << "Done." << std::endl;
 
-    // Chiudi la .so
     dlclose(handle);
-
     return 0;
 }
