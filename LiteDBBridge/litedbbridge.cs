@@ -1,24 +1,41 @@
 using System;
 using System.Runtime.InteropServices;
+using System.Text;
 using LiteDB;
 
-public static class MyWrapper
+public static class LiteDBBridge
 {
-    [UnmanagedCallersOnly(EntryPoint = "InsertDocument")]
-    public static void InsertDocument(IntPtr dbPathPtr)
+    [UnmanagedCallersOnly(EntryPoint = "GetCollectionNames")]
+    public static IntPtr GetCollectionNames(IntPtr dbPathPtr)
     {
-        // Converte IntPtr in string UTF8
         string dbPath = Marshal.PtrToStringUTF8(dbPathPtr);
-
-        using var db = new LiteDatabase(dbPath);
-        var col = db.GetCollection<BsonDocument>("mycollection");
-
-        var doc = new BsonDocument
+        
+        var connectionString = new ConnectionString
         {
-            ["name"] = "test",
-            ["value"] = 123
+            Filename = dbPath,
+            Upgrade = true
         };
 
-        col.Insert(doc);
+        using (var db = new LiteDatabase(connectionString))
+        {
+            var collectionNames = db.GetCollectionNames();
+
+            // Concatena tutti i nomi in una stringa separata da '\n'
+            var sb = new StringBuilder();
+            foreach (var name in collectionNames)
+            {
+                sb.AppendLine(name);
+            }
+
+            // Converte in UTF8 e alloca unmanaged memory
+            string resultString = sb.ToString();
+            byte[] utf8Bytes = Encoding.UTF8.GetBytes(resultString + '\0'); // null-terminated string
+
+            IntPtr unmanagedPtr = Marshal.AllocHGlobal(utf8Bytes.Length);
+            Marshal.Copy(utf8Bytes, 0, unmanagedPtr, utf8Bytes.Length);
+
+            // Il C++ riceverà un const char* e potrà leggerlo
+            return unmanagedPtr;
+        }
     }
 }

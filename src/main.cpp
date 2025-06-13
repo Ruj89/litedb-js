@@ -1,7 +1,8 @@
 #include <dlfcn.h>
 #include <iostream>
+#include <cstdlib> // for free()
 
-typedef void (*InsertDocumentFunc)(const char*);
+typedef char* (*GetCollectionNamesFunc)(const char*);
 
 int main(int argc, char* argv[])
 {
@@ -20,17 +21,25 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    InsertDocumentFunc insertDocument = (InsertDocumentFunc)dlsym(handle, "InsertDocument");
-    if (!insertDocument)
+    GetCollectionNamesFunc getCollectionNames = (GetCollectionNamesFunc)dlsym(handle, "GetCollectionNames");
+    if (!getCollectionNames)
     {
-        std::cerr << "Cannot find symbol InsertDocument: " << dlerror() << std::endl;
+        std::cerr << "Cannot find symbol GetCollectionNames: " << dlerror() << std::endl;
         dlclose(handle);
         return 1;
     }
 
-    std::cout << "Calling InsertDocument with db: " << dbPath << std::endl;
-    insertDocument(dbPath);
-    std::cout << "Done." << std::endl;
+    std::cout << "Calling GetCollectionNames on db: " << dbPath << std::endl;
+    char* collectionNames = getCollectionNames(dbPath);
+
+    std::cout << "Collections found:\n" << collectionNames << std::endl;
+
+    // ATTENZIONE: chi libera la memoria? Qui dovresti progettare un Free function nel bridge, oppure:
+    // Se sei sicuro che il programma finisce subito, puoi lasciarlo vivere.
+
+    // Altrimenti, se vuoi pulire bene:
+    // dlclose(handle);
+    // -- Aggiungi in C# un metodo FreeMemory(IntPtr ptr) che chiama Marshal.FreeHGlobal(ptr), e chiamalo da C++.
 
     dlclose(handle);
     return 0;
