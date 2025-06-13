@@ -3,6 +3,8 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
+    "build-csharp": "cd LiteDBBridge; dotnet publish -c Release -r linux-x64 --self-contained -p:PublishAot=true",
+    "build-cpp": "npm run build-csharp; cd src; g++ main.cpp -o myapp -ldl",
     "build": "node-gyp rebuild",
     "test": "jest --config jest.config.ts"
   },
