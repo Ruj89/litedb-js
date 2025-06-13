@@ -1,8 +1,11 @@
 #include <dlfcn.h>
 #include <iostream>
-#include <cstdlib> // for free()
+#include <cstdlib>
 
-typedef char* (*GetCollectionNamesFunc)(const char*);
+typedef void* (*OpenDatabaseFunc)(const char*);
+typedef char* (*ListCollectionsFunc)(void*);
+typedef void (*CloseDatabaseFunc)(void*);
+typedef void (*FreeMemoryFunc)(void*);
 
 int main(int argc, char* argv[])
 {
@@ -21,25 +24,31 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    GetCollectionNamesFunc getCollectionNames = (GetCollectionNamesFunc)dlsym(handle, "GetCollectionNames");
-    if (!getCollectionNames)
+    auto openDatabase = (OpenDatabaseFunc)dlsym(handle, "OpenDatabase");
+    auto listCollections = (ListCollectionsFunc)dlsym(handle, "ListCollections");
+    auto closeDatabase = (CloseDatabaseFunc)dlsym(handle, "CloseDatabase");
+    auto freeMemory = (FreeMemoryFunc)dlsym(handle, "FreeMemory");
+
+    if (!openDatabase || !listCollections || !closeDatabase || !freeMemory)
     {
-        std::cerr << "Cannot find symbol GetCollectionNames: " << dlerror() << std::endl;
+        std::cerr << "Failed to load one or more functions from LiteDBBridge.so" << std::endl;
         dlclose(handle);
         return 1;
     }
 
-    std::cout << "Calling GetCollectionNames on db: " << dbPath << std::endl;
-    char* collectionNames = getCollectionNames(dbPath);
+    std::cout << "Opening database: " << dbPath << std::endl;
+    void* dbHandle = openDatabase(dbPath);
+
+    std::cout << "Listing collections..." << std::endl;
+    char* collectionNames = listCollections(dbHandle);
 
     std::cout << "Collections found:\n" << collectionNames << std::endl;
 
-    // ATTENZIONE: chi libera la memoria? Qui dovresti progettare un Free function nel bridge, oppure:
-    // Se sei sicuro che il programma finisce subito, puoi lasciarlo vivere.
+    // Libera la memoria della stringa
+    freeMemory(collectionNames);
 
-    // Altrimenti, se vuoi pulire bene:
-    // dlclose(handle);
-    // -- Aggiungi in C# un metodo FreeMemory(IntPtr ptr) che chiama Marshal.FreeHGlobal(ptr), e chiamalo da C++.
+    // Chiudi il database
+    closeDatabase(dbHandle);
 
     dlclose(handle);
     return 0;
