@@ -4,6 +4,11 @@ using System.Text;
 using LiteDB;
 using System.Runtime.InteropServices.JavaScript;
 
+public class Program
+{
+   static void Main() {}
+}
+
 public partial class LiteDBBridge
 {
     [JSExport]
