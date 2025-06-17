@@ -2,8 +2,7 @@
 import { dotnet } from './_framework/dotnet.js';
 
 let liteDBExports = null;
-// let jsRuntime = null; // NON PIÙ NECESSARIO
-let wasmModule = null; // Per _malloc, _free, HEAPU8 dell'istanza WASM
+let wasmModule = null; // Per _malloc, _free, HEAPU8, FS
 let currentDbHandle = 0;
 
 /**
@@ -17,10 +16,7 @@ function jsStringToWasmPtr(jsString) {
     const encoder = new TextEncoder();
     const utf8Bytes = encoder.encode(jsString + '\0'); // Aggiungi null-terminator
 
-    // Usa _malloc dal modulo WASM effettivo
     const ptr = wasmModule._malloc(utf8Bytes.length);
-    
-    // Scrivi i byte nella memoria WASM tramite HEAPU8
     wasmModule.HEAPU8.set(utf8Bytes, ptr);
 
     return ptr;
@@ -37,7 +33,6 @@ function wasmPtrToJsString(ptr) {
 
     const decoder = new TextDecoder('utf-8');
     
-    // Accedi al buffer della memoria WASM tramite HEAPU8
     const memoryView = new Uint8Array(wasmModule.HEAPU8.buffer, ptr);
 
     let length = 0;
@@ -66,7 +61,6 @@ async function openLiteDB(dbPath) {
 
     currentDbHandle = liteDBExports.OpenDatabase(dbPathPtr);
     
-    // Libera la memoria della stringa del percorso DB allocata da JS usando _free del modulo WASM
     wasmModule._free(dbPathPtr); 
     
     console.log(`Database opened, handle: ${currentDbHandle}`);
@@ -84,8 +78,6 @@ async function listCollections() {
     
     const collectionNamesString = wasmPtrToJsString(collectionsPtr);
     
-    // Libera la memoria della stringa dei nomi delle collezioni restituita da C#
-    // Chiamando il tuo metodo C# FreeMemory
     liteDBExports.FreeMemory(collectionsPtr); 
 
     console.log("Collections:", collectionNamesString);
@@ -103,10 +95,51 @@ async function closeLiteDB() {
     console.log("Database closed and handle freed.");
 }
 
+/**
+ * Carica un File da input HTML nel Filesystem Virtuale WASM.
+ * @param {File} file Il File object dall'input HTML.
+ */
+async function uploadFileToVFS(file) {
+    if (!wasmModule || !wasmModule.FS) {
+        console.error("WASM Filesystem (FS) non disponibile.");
+        return;
+    }
+
+    console.log(`Inizio caricamento file: ${file.name} (${file.size} bytes) nel VFS...`);
+    
+    try {
+        const arrayBuffer = await file.arrayBuffer();
+        const uint8Array = new Uint8Array(arrayBuffer);
+
+        try {
+            wasmModule.FS.unlink(file.name); 
+            console.warn(`Il file '${file.name}' esistente nel VFS è stato rimosso.`);
+        } catch (e) {
+            console.dir(e)
+            if (e.errno === 44 || (e.message && e.message.includes('No such file or directory'))) {
+                console.log(`Il file '${file.name}' non esiste ancora nel VFS. Procedo con la creazione.`);
+            } else {
+                console.error(`Errore inaspettato durante la rimozione del file esistente: ${e.message || e.toString()}`, e);
+                throw e;
+            }
+        }
+
+        // A questo punto, il file è stato rimosso se esisteva, o non esisteva affatto.
+        // Possiamo procedere a scriverlo con la flag 'w' in modo sicuro.
+        wasmModule.FS.writeFile(file.name, uint8Array, { flags: 'w' }); 
+        
+        console.log(`File '${file.name}' caricato con successo nel VFS.`);
+        console.log(`Ora puoi aprire il database LiteDB usando il percorso '${file.name}'.`);
+        // --- FINE REVISIONE ---
+        
+    } catch (e) {
+        // Gestione generica degli errori durante il caricamento/scrittura
+        console.error(`Errore durante il caricamento del file nel VFS: ${e.message || e.toString()}`, e);
+    }
+}
+
 async function initializeDotNet() {
     try {
-        // Deconstruisci l'oggetto ritornato da dotnet.create()
-        // Rimosso getJSRuntime in quanto non è più una funzione esposta qui
         const { getAssemblyExports, getConfig, Module } = await dotnet.create(); 
         const config = getConfig();
 
@@ -117,19 +150,17 @@ async function initializeDotNet() {
 
         console.log("LiteDB C# WASM Library Loaded!");
         
+        // Esponi le funzioni al contesto globale
         window.LiteDB = {
             open: openLiteDB,
             listCollections: listCollections,
-            close: closeLiteDB
+            close: closeLiteDB,
+            uploadFile: uploadFileToVFS, // Aggiungi la funzione di caricamento
+            isReady: true // Indica che l'API è pronta
         };
 
         console.log("LiteDB JavaScript API ready via window.LiteDB");
 
-        // Esempio di utilizzo:
-        await window.LiteDB.open("mytest.db");
-        const collections = await window.LiteDB.listCollections();
-        console.log("Collections from example:", collections);
-        await window.LiteDB.close();
 
     } catch (error) {
         console.error("Failed to load .NET WASM LiteDB library:", error);

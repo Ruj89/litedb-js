@@ -13,9 +13,10 @@
             border: 1px solid #ccc;
             background-color: #f9f9f9;
             min-height: 100px;
-            white-space: pre-wrap; /* Mantiene la formattazione dei newline */
+            white-space: pre-wrap;
             font-family: monospace;
         }
+        .file-upload-section { margin-top: 20px; padding: 15px; border: 1px dashed #ddd; background-color: #fdfdfd; }
     </style>
 </head>
 <body>
@@ -28,6 +29,13 @@
         <button id="closeDbBtn">Close Database</button>
     </div>
 
+    <div class="file-upload-section">
+        <h3>Carica un file sul Filesystem Virtuale</h3>
+        <input type="file" id="fileInput" accept=".db" />
+        <button id="uploadFileBtn">Carica nel VFS</button>
+        <p>Una volta caricato, puoi aprire il DB specificando lo stesso nome file.</p>
+    </div>
+
     <h3>Output Console del Browser:</h3>
     <div id="output"></div>
 
@@ -35,25 +43,23 @@
 
     <script type="module">
         // Attendi che l'API LiteDB sia disponibile sul window
-        // (Impostata dal main.js dopo che il runtime .NET è caricato)
         async function waitForLiteDBApi() {
             return new Promise(resolve => {
                 const interval = setInterval(() => {
-                    if (window.LiteDB) {
+                    if (window.LiteDB && window.LiteDB.isReady) { // Aggiunto isReady per essere sicuri
                         clearInterval(interval);
                         resolve();
                     }
-                }, 100); // Controlla ogni 100ms
+                }, 100);
             });
         }
 
-        // Funzione per reindirizzare i log della console del browser al div #output
         const originalConsoleLog = console.log;
         console.log = function(...args) {
             originalConsoleLog.apply(console, args);
             const outputDiv = document.getElementById('output');
             outputDiv.textContent += args.join(' ') + '\n';
-            outputDiv.scrollTop = outputDiv.scrollHeight; // Scrolla in fondo
+            outputDiv.scrollTop = outputDiv.scrollHeight;
         };
         const originalConsoleError = console.error;
         console.error = function(...args) {
@@ -65,12 +71,10 @@
 
 
         document.addEventListener('DOMContentLoaded', async () => {
-            await waitForLiteDBApi(); // Attendi che window.LiteDB sia disponibile
-
-            console.log("LiteDB API is now available in window.LiteDB");
+            await waitForLiteDBApi(); 
 
             document.getElementById('openDbBtn').addEventListener('click', async () => {
-                await window.LiteDB.open("mytest.db");
+                await window.LiteDB.open("games.db");
             });
 
             document.getElementById('listCollectionsBtn').addEventListener('click', async () => {
@@ -80,6 +84,17 @@
 
             document.getElementById('closeDbBtn').addEventListener('click', async () => {
                 await window.LiteDB.close();
+            });
+
+            document.getElementById('uploadFileBtn').addEventListener('click', async () => {
+                const fileInput = document.getElementById('fileInput');
+                if (fileInput.files.length > 0) {
+                    const file = fileInput.files[0];
+                    console.log(`Tentativo di caricare il file: ${file.name}`);
+                    await window.LiteDB.uploadFile(file); // Richiama la nuova funzione in main.js
+                } else {
+                    console.warn("Nessun file selezionato.");
+                }
             });
         });
     </script>
