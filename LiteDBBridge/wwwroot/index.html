@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LiteDB WASM Bridge Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        #output {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ccc;
+            background-color: #f9f9f9;
+            min-height: 100px;
+            white-space: pre-wrap; /* Mantiene la formattazione dei newline */
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>LiteDB WASM Bridge Test</h1>
+    <p>Interagisci con il database LiteDB compilato in WebAssembly.</p>
+
+    <div>
+        <button id="openDbBtn">Open/Create Database (mytest.db)</button>
+        <button id="listCollectionsBtn">List Collections</button>
+        <button id="closeDbBtn">Close Database</button>
+    </div>
+
+    <h3>Output Console del Browser:</h3>
+    <div id="output"></div>
+
+    <script type="module" src="./main.js"></script>
+
+    <script type="module">
+        // Attendi che l'API LiteDB sia disponibile sul window
+        // (Impostata dal main.js dopo che il runtime .NET è caricato)
+        async function waitForLiteDBApi() {
+            return new Promise(resolve => {
+                const interval = setInterval(() => {
+                    if (window.LiteDB) {
+                        clearInterval(interval);
+                        resolve();
+                    }
+                }, 100); // Controlla ogni 100ms
+            });
+        }
+
+        // Funzione per reindirizzare i log della console del browser al div #output
+        const originalConsoleLog = console.log;
+        console.log = function(...args) {
+            originalConsoleLog.apply(console, args);
+            const outputDiv = document.getElementById('output');
+            outputDiv.textContent += args.join(' ') + '\n';
+            outputDiv.scrollTop = outputDiv.scrollHeight; // Scrolla in fondo
+        };
+        const originalConsoleError = console.error;
+        console.error = function(...args) {
+            originalConsoleError.apply(console, args);
+            const outputDiv = document.getElementById('output');
+            outputDiv.textContent += 'ERROR: ' + args.join(' ') + '\n';
+            outputDiv.scrollTop = outputDiv.scrollHeight;
+        };
+
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await waitForLiteDBApi(); // Attendi che window.LiteDB sia disponibile
+
+            console.log("LiteDB API is now available in window.LiteDB");
+
+            document.getElementById('openDbBtn').addEventListener('click', async () => {
+                await window.LiteDB.open("mytest.db");
+            });
+
+            document.getElementById('listCollectionsBtn').addEventListener('click', async () => {
+                const collections = await window.LiteDB.listCollections();
+                console.log("Collections fetched:", collections.length > 0 ? collections.join(', ') : "No collections found.");
+            });
+
+            document.getElementById('closeDbBtn').addEventListener('click', async () => {
+                await window.LiteDB.close();
+            });
+        });
+    </script>
+</body>
+</html>

@@ -2,11 +2,12 @@ using System;
 using System.Runtime.InteropServices;
 using System.Text;
 using LiteDB;
+using System.Runtime.InteropServices.JavaScript;
 
-public static class LiteDBBridge
+public partial class LiteDBBridge
 {
-    [UnmanagedCallersOnly(EntryPoint = "OpenDatabase")]
-    public static IntPtr OpenDatabase(IntPtr dbPathPtr)
+    [JSExport]
+    internal static IntPtr OpenDatabase(IntPtr dbPathPtr)
     {
         string dbPath = Marshal.PtrToStringUTF8(dbPathPtr);
 
@@ -25,8 +26,8 @@ public static class LiteDBBridge
         return (IntPtr)handle;
     }
 
-    [UnmanagedCallersOnly(EntryPoint = "ListCollections")]
-    public static IntPtr ListCollections(IntPtr dbHandle)
+    [JSExport]
+    internal static IntPtr ListCollections(IntPtr dbHandle)
     {
         var handle = (GCHandle)dbHandle;
         var db = (LiteDatabase)handle.Target;
@@ -48,8 +49,8 @@ public static class LiteDBBridge
         return unmanagedPtr;
     }
 
-    [UnmanagedCallersOnly(EntryPoint = "CloseDatabase")]
-    public static void CloseDatabase(IntPtr dbHandle)
+    [JSExport]
+    internal static void CloseDatabase(IntPtr dbHandle)
     {
         var handle = (GCHandle)dbHandle;
         var db = (LiteDatabase)handle.Target;
@@ -58,8 +59,8 @@ public static class LiteDBBridge
         handle.Free(); // libera il GCHandle
     }
 
-    [UnmanagedCallersOnly(EntryPoint = "FreeMemory")]
-    public static void FreeMemory(IntPtr ptr)
+    [JSExport]
+    internal static void FreeMemory(IntPtr ptr)
     {
         Marshal.FreeHGlobal(ptr);
     }
